@@ -1,0 +1,16 @@
+{
+  "file_format_version": "1.2.0",
+  "layer": {
+    "name": "VK_LAYER_BNG_fsr4",
+    "type": "GLOBAL",
+    "library_path": "@LIBRARY@",
+    "api_version": "1.4.0",
+    "implementation_version": "1",
+    "description": "Unofficial FSR 4.1.1 for BeamNG.drive on native Linux (replaces the game's FSR 3 custom upscaler)",
+    "functions": {
+      "vkNegotiateLoaderLayerInterfaceVersion": "vkNegotiateLoaderLayerInterfaceVersion"
+    },
+    "enable_environment": { "BNG_FSR4": "1" },
+    "disable_environment": { "BNG_FSR4_DISABLE": "1" }
+  }
+}
