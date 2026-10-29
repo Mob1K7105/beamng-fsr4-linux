@@ -2,7 +2,7 @@
 
 | Area | Tested | Expected / notes |
 |---|---|---|
-| BeamNG.drive | 0.40.1.0 and 0.40.0.0 native Linux, Vulkan | Other versions: shader fingerprints may differ → automatic FSR 3 fallback until updated |
+| BeamNG.drive | 0.40.4.0, 0.40.1.0 and 0.40.0.0 native Linux, Vulkan | Other versions: shader fingerprints may differ → automatic FSR 3 fallback until updated |
 | Anti-aliasing mode | FSR (custom) (`fsrCustom`, upscale mode 5) | Other modes untouched |
 | Render scale | 0.5, 0.67, 1.0 (mode off) | Any scale ≥ 1/3; ≥ 2.9× upscale uses the Ultra Performance model (untested in-game) |
 | Output | 2560×1440 borderless | Up to 3840×2160 supported by the backend; ≤1080p uses the smaller tier (untested in-game) |

@@ -27,7 +27,8 @@ Done:
       an offline replay (22/22), 10,801 frames hard 0, output-size change while running
 - [x] Installed package, direct launch with only `BNG_FSR4=1`: 1,801 frames replaced, hard 0
 - [x] Menu label reads "FSR 4.1.2 (Linux)"
-- [ ] Steam launch (not repeated; that path is unchanged since 0.1.0)
+- [x] Steam launch on BeamNG 0.40.4.0 (Steam Linux Runtime sniper, overlay and Fossilize loaded): 10,801
+      frames replaced in gridmap, hard 0
 
 Before a public release:
 - [ ] **Release build:** the package uses the lean mode (small log in `$XDG_CACHE_HOME/bng-fsr4`); the diagnostic

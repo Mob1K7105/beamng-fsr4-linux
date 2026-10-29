@@ -2,8 +2,8 @@
 
 ## 0.2.0: FSR 4.1.2 (FSR SDK 2.4.0)
 
-Run on an RX 6700 XT (RDNA 2), Mesa 26.2.5 RADV, BeamNG.drive 0.40.1.0, on 2026-10-29. Every comparison is
-byte for byte.
+Run on an RX 6700 XT (RDNA 2), Mesa 26.2.5 RADV, BeamNG.drive 0.40.1.0 (step 9: 0.40.4.0), on 2026-10-29.
+Every comparison is byte for byte.
 
 1. **Which INT8 kernels AMD's DLL runs.** `amd_fidelityfx_upscaler_dx12.dll` from FSR SDK 2.4.0 (SHA-256
    `aad4fccc…`, provider `4.1.2`) has two INT8 providers. It chooses `ffxProvider_FSR4_Int8_Navi2` for GPU
@@ -22,7 +22,6 @@ byte for byte.
    (and a static one), 67% and 50% render scale, 1080p output, 48 frames. 4.1.1, 4.1.2 generic and 4.1.2
    Navi2 score within 0.01 dB PSNR of each other, with the same temporal error. 4.1.2 generic and 4.1.1 give
    identical scores.
-
 5. **BeamNG loads the Navi2 set.** `events.log` reads `FSR4: GPU 1002:73df navi2x=1 variant=auto -> INT8 navi2`.
    All 29 programs a frame dispatches were created on BeamNG's device byte-identical to the files in
    `assets/navi2`. The two files not loaded are fallbacks this driver does not need.
@@ -36,9 +35,12 @@ byte for byte.
 8. **Installed package.** `install.sh` from `beamng-fsr4-linux-0.2.0.tar.gz`, game started with only `BNG_FSR4=1`:
    the Navi2 set was picked, 1,801 frames replaced, hard 0, jitter mismatches 0. The menu reads "FSR 4.1.2 (Linux)"
    (`core_locales`, and the option list holds the swapped key).
-
-**Not repeated for 0.2.0:** a launch through Steam (the Steam Linux Runtime container). Nothing on that path
-changed since 0.1.0: the same manifest, library location and switch.
+9. **Steam launch, BeamNG.drive 0.40.4.0.** Steam updated the game from 0.40.1.0 to 0.40.4.0 before this launch.
+   Launch options were `BNG_FSR4=1 %command%`. Steam ran the game in the Steam Linux Runtime (pressure-vessel,
+   sniper). The game process had the installed layer, the Steam overlay and Fossilize loaded. The game's FSR 3
+   shaders still matched the layer's fingerprints, and the layer picked the Navi2 set. In gridmap, with
+   FSR 3 (custom) at 0.67 and 20 user mods active, 10,801 frames were replaced, hard 0, jitter mismatches 0,
+   no amdgpu errors. The menu read "FSR 4.1.2 (Linux)".
 
 ## 0.1.0: FSR 4.1.1 (FidelityFX SDK 2.3.0)
 

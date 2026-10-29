@@ -26,7 +26,7 @@ DirectX, and no game files are modified.
 
 | | |
 |---|---|
-| Game | BeamNG.drive **0.40.1.0** (also 0.40.0.0), native Linux build (`BinLinux/BeamNG.drive.x64`), Vulkan renderer |
+| Game | BeamNG.drive **0.40.4.0** (also 0.40.1.0 and 0.40.0.0), native Linux build (`BinLinux/BeamNG.drive.x64`), Vulkan renderer |
 | In-game setting | Anti-aliasing: **FSR 3 (custom)**, i.e. BeamNG's `fsrCustom` upscaler, at any render scale (shown as "FSR 4.1.2 (Linux)" with the menu-label mod) |
 | GPU | AMD RDNA 2 or newer on Mesa RADV (tested: RX 6700 XT, Mesa 26.2.5) |
 | Vulkan features | 1.3, shaderInt8, shaderIntegerDotProduct, 16-bit arithmetic, `VK_KHR_push_descriptor`, `VK_KHR_compute_shader_derivatives`; `VK_VALVE_shader_mixed_float_dot_product` used when present |
