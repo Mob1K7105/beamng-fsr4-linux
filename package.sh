@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Builds dist/beamng-fsr4-linux-<version>.tar.gz plus an unversioned copy (the "latest" download link): the layer,
-# the FSR 4.1.1 assets, the menu-label BeamNG mod, installer, docs, licences and the complete layer source.
+# the FSR 4.1.2 assets, the menu-label BeamNG mod, installer, docs, licences and the complete layer source.
 set -euo pipefail
 cd "$(dirname "$0")"
 version=${1:-$(cat VERSION)}

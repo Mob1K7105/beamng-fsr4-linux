@@ -71,6 +71,22 @@ worth taking:
 - The INT8 network already compiles to hardware `v_dot4` instructions and does not spill.
 - Removing barriers is worth 0.15 ms at most, and only 0.03 ms of that can be removed without proving there is no data race.
 
+## FSR 4.1.2 (2026-10-29)
+
+0.2.0 uses AMD's RDNA 2 INT8 kernels (the 4.1.2 DLL's Navi2 provider) on Navi 2x. Offline GPU time on an
+RX 6700 XT, medians over 600 frames, three rounds that agreed within 0.02 ms:
+
+| Render → output | FSR 4.1.1 | 4.1.2 generic | **4.1.2 Navi2** |
+|---|---:|---:|---:|
+| 1280×720 → 1920×1080 | 1.527 ms | 1.525 ms | **1.482 ms** |
+| 1280×720 → 2560×1440 (50%) | 2.635 ms | 2.633 ms | **2.560 ms** |
+| 1707×960 → 2560×1440 (67%) | 2.648 ms | 2.642 ms | **2.589 ms** |
+| 2259×1271 → 3840×2160 | 5.902 ms | 5.897 ms | **5.818 ms** |
+
+At 1440p that is about 0.06–0.07 ms less per frame (−2 to −3%). Most of it comes from the prepass (−0.05 ms)
+and pass11 (−0.02 ms). In a GPU-bound scene at about 90 fps, this is worth about half a frame per second. The
+in-game tables above were measured with 4.1.1.
+
 ## Why FSR 4 costs more on RDNA 2
 
 FSR 4.1.1 is a neural network. RDNA 2 has no WMMA or FP8 hardware, so the INT8 model runs on packed dot

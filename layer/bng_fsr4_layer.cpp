@@ -53,6 +53,7 @@ __attribute__((constructor(101))) void ReleaseDefaults() {
     if (const char* v = getenv("BNG_FSR4_SHARPNESS")) setenv("FSR4STUDY_SHARPNESS", v, 0);
     if (getenv("BNG_FSR4_NO_SHARPEN")) setenv("FSR4STUDY_NO_SHARPEN", "1", 0);
     if (getenv("BNG_FSR4_KEEP_FSR3")) setenv("FSR4STUDY_KEEP_FSR3", "1", 0);
+    if (const char* v = getenv("BNG_FSR4_VARIANT")) setenv("FSR4STUDY_VARIANT", v, 0);
 }
 
 std::mutex g_mutex;
@@ -854,6 +855,21 @@ void F4ProcessReadback() {
         uint32_t ph = uint32_t(idx % int64_t(seq)); g_f4.table[ph] = {jx, jy}; g_f4.have[ph] = 1;
     }
 }
+// FSR 4.1.2 has two INT8 providers of the same model. AMD's DLL picks the Navi2 one for GPU family NV with a Navi 2x
+// revision (RX 6000) and the generic one otherwise; the layer does the same by PCI device ID (Navi 21-23: 0x73a0-0x73ff,
+// Navi 24: 0x7420-0x743f) and loads <assets>/navi2 when it exists. FSR4STUDY_VARIANT=generic|navi2 overrides.
+std::string F4AssetDir(const std::string& base) {
+    VkPhysicalDeviceProperties pp; reinterpret_cast<PFN_vkGetPhysicalDeviceProperties>(g_gipa(g_instance, "vkGetPhysicalDeviceProperties"))(g_pd, &pp);
+    const uint32_t id = pp.deviceID;
+    const bool navi2x = pp.vendorID == 0x1002 && ((id >= 0x73a0 && id <= 0x73ff) || (id >= 0x7420 && id <= 0x743f));
+    const char* v = getenv("FSR4STUDY_VARIANT");
+    const bool want = v && *v ? !strcmp(v, "navi2") : navi2x;
+    const std::string dir = base + "/navi2";
+    struct stat st{};
+    const bool have = stat(dir.c_str(), &st) == 0 && S_ISDIR(st.st_mode);
+    Ev("FSR4: GPU %04x:%04x navi2x=%d variant=%s -> INT8 %s", pp.vendorID, id, int(navi2x), v && *v ? v : "auto", want && have ? "navi2" : "generic");
+    return want && have ? dir : base;
+}
 // Returns true when FSR 4 produced the output (the original RCAS dispatch is then skipped).
 bool F4TryReplaceRcas(VkCommandBuffer c) {
     // A skipped chain left no FSR 3 result: failing open would show a stale image.
@@ -910,7 +926,7 @@ bool F4TryReplaceRcas(VkCommandBuffer c) {
     }
     if (!g_f4.up) {
         const char* a = getenv("FSR4STUDY_ASSETS");
-        g_f4.up = std::make_unique<Fsr411::Upscaler>(g_pd, g_device, a ? a : "assets", g_fsr4_valve, g_fsr4_wave);
+        g_f4.up = std::make_unique<Fsr411::Upscaler>(g_pd, g_device, F4AssetDir(a ? a : "assets"), g_fsr4_valve, g_fsr4_wave);
         Ev("FSR4: backend constructed (valve dot=%d, per-pass wave size=%d, lean=%d)", int(g_fsr4_valve), int(g_fsr4_wave), int(g_lean));
     }
     CbInfo game_state;

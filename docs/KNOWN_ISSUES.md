@@ -1,7 +1,7 @@
 # Known issues and limitations
 
-- **Costs more than FSR 3 on RDNA 2.** FSR 4.1.1 INT8 takes about 2.7 ms per frame at 1440p output on an
-  RX 6700 XT; with FSR 3's passes skipped, the net extra cost is about 1.1 ms. See [PERFORMANCE.md](PERFORMANCE.md).
+- **Costs more than FSR 3 on RDNA 2.** FSR 4.1.2 INT8 (RDNA 2 kernels) takes about 2.6 ms per frame at 1440p
+  output on an RX 6700 XT; with FSR 3's passes skipped, the net extra cost is about 1 ms. See [PERFORMANCE.md](PERFORMANCE.md).
 - **One frame after a same-size game reset** (for example toggling the upscaler) uses a stale jitter value,
   because the reset is only visible in the late readback. FSR 3 then takes over for 17–32 frames while the
   jitter is relearned.
@@ -17,7 +17,8 @@
 - **Not tested:** MangoHud or gamescope active together with the layer (both were loaded but not switched on),
   the Steam overlay drawn in-game (it loaded and the game ran normally), GPUs other than the RX 6700 XT,
   RDNA 3/4, NVIDIA (no `VK_VALVE_shader_mixed_float_dot_product`: the portable path is not bit-exact),
-  Intel, outputs other than 2560×1440, HDR, VR, multi-monitor.
+  Intel, outputs other than 2560×1440, HDR, VR, multi-monitor. The generic INT8 set (used on GPUs other than
+  Navi 2x) was verified on the RX 6700 XT only, by forcing it with `BNG_FSR4_VARIANT=generic`.
 - **Image-quality verdict under motion** is still open. Static scenes look clean, and a wrong-sign
   motion-vector test confirmed the motion handling. A systematic side-by-side in motion has not been done.
 - **Diagnostic code is still compiled in.** In its default lean mode it only writes a short event log;

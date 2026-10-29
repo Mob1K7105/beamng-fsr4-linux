@@ -15,7 +15,7 @@ The installer checks the package against `SHA256SUMS` and then installs:
 
 | What | Where |
 |---|---|
-| The layer and the FSR 4.1.1 assets | `~/.local/share/bng-fsr4/` |
+| The layer and the FSR 4.1.2 assets | `~/.local/share/bng-fsr4/` |
 | The Vulkan layer manifest | `~/.local/share/vulkan/implicit_layer.d/VkLayer_bng_fsr4.json` |
 | The menu-label mod (optional, `--no-menu-mod` skips it) | `<BeamNG user folder>/mods/bng_fsr4_linux.zip` |
 
@@ -26,7 +26,7 @@ it does nothing in programs other than BeamNG.drive.
 
 1. Steam → BeamNG.drive → Properties → Launch Options: `BNG_FSR4=1 %command%`
 2. In the game: Options → Graphics → Anti-aliasing: **FSR 3 (custom)**. With the menu-label mod enabled,
-   this entry reads **FSR 4.1.1 (Linux)** while the layer runs. Pick any render scale; FSR 4 replaces
+   this entry reads **FSR 4.1.2 (Linux)** while the layer runs. Pick any render scale; FSR 4 replaces
    FSR 3's output at all of them.
 3. The game's Sharpness slider also controls FSR 4's sharpening.
 
@@ -55,6 +55,7 @@ Launching without Steam works too:
 | `BNG_FSR4_SHARPNESS=0.5` | fixed FSR 4 sharpness (0–1) instead of the game's slider |
 | `BNG_FSR4_NO_SHARPEN=1` | no FSR 4 sharpening |
 | `BNG_FSR4_KEEP_FSR3=1` | keep running FSR 3's passes under FSR 4 (about 1.2 ms slower; for comparison) |
+| `BNG_FSR4_VARIANT=generic` / `navi2` | INT8 kernels to use. Default: `navi2` on Radeon RX 6000 (Navi 2x), `generic` on other GPUs |
 | `BNG_FSR4_DISABLE=1` | force the layer off |
 | `BNG_FSR4_USERFOLDER=…` | BeamNG user folder, if it is not `~/.local/share/BeamNG/BeamNG.drive/current` (used for the menu-label status) |
 

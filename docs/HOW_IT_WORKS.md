@@ -13,7 +13,7 @@ BeamNG's `fsrCustom` upscaler records one block of compute passes per frame (deb
 | `fsr3/fsr3PrepareInputs` | inputs captured, dispatch skipped* |
 | `fsr3/fsr3LumaPyramid`, `ShadingChangePyramid`, `ShadingChange`, `PrepareReactivity`, `LumaInstability` | skipped* |
 | `fsr3/fsr3Accumulate` | constant buffer copied for jitter, dispatch skipped* |
-| `fsr3/fsr3Rcas` (final pass) | **replaced by FSR 4.1.1** writing the same output image |
+| `fsr3/fsr3Rcas` (final pass) | **replaced by FSR 4.1.2** writing the same output image |
 
 \* Skipped only while FSR 4 is active; otherwise the original FSR 3 passes run. Nothing outside
 `upscale/fsr3/` reads the FSR 3 intermediates, so skipping them does not affect the rest of the frame.
@@ -24,6 +24,11 @@ FSR 4 inputs, read from the bound descriptors:
 - depth: `r_input_depth` (48), D32S8 reversed-Z, depth aspect
 - motion vectors: `r_input_motion_vectors` (47), RG16F in UV units → `motion_scale = render size`
 - output: `rw_upscaled_output` (RCAS binding 31), RGBA16F, display resolution, layout `GENERAL`
+
+The FSR 4 kernels come from one of two asset sets, as in AMD's DLL. `assets/navi2/` (the DLL's Navi2 INT8
+provider) is used on Radeon RX 6000 (PCI device IDs 0x73a0–0x73ff and 0x7420–0x743f); `assets/` (the generic
+INT8 provider) on other GPUs. Both run the same model and weights. `events.log` records the choice
+(`FSR4: GPU … -> INT8 navi2`).
 
 Shaders are identified by the engine's debug names plus SPIR-V hashes. A game update that changes them
 makes the layer fall back to FSR 3 automatically.

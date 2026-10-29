@@ -815,9 +815,11 @@ struct Upscaler::Impl {
                 break;
             }
             case Kind::Model: {
+                // One thread per tensor element, tiled by the shader's workgroup: 64x1 for every
+                // pass of the generic INT8 set, 8x4 for pass11 of the Navi2 set (4.1.2).
                 const uint32_t level = kRunLevel[p.k];
-                gx = CeilDiv(aw >> level, 64);
-                gy = ah >> level;
+                gx = CeilDiv(aw >> level, p.refl.local_size[0]);
+                gy = CeilDiv(ah >> level, p.refl.local_size[1]);
                 break;
             }
             }

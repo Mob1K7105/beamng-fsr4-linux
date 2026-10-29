@@ -7,9 +7,9 @@
 | Component | License | Notes |
 |---|---|---|
 | This layer (`diag_layer.cpp`, build scripts) | GPL-2.0-or-later | Required: it links the GPL runtime below |
-| FSR 4.1.1 Vulkan runtime (`fsr411.cpp/.h`) from [FSR-4.1.1-linux](https://github.com/johnpanos/FSR-4.1.1-linux), adapted from [bbport](https://github.com/deadinside28/bloodborne_pc) | GPL-2.0-or-later | **Modified** (2026-10-20): per-pass required subgroup size (`kWave`), descriptor bindings resolved at load, `subgroup_size_control` constructor argument. Output unchanged (byte-exact against the AMD DLL). Two device queries are redirected by build macros |
+| FSR 4.1.1 Vulkan runtime (`fsr411.cpp/.h`) from [FSR-4.1.1-linux](https://github.com/johnpanos/FSR-4.1.1-linux), adapted from [bbport](https://github.com/deadinside28/bloodborne_pc) | GPL-2.0-or-later | **Modified** (2026-10-20): per-pass required subgroup size (`kWave`), descriptor bindings resolved at load, `subgroup_size_control` constructor argument. Output unchanged (byte-exact against the AMD DLL). Two device queries are redirected by build macros 2026-10-29: model-pass group counts taken from the shader workgroup size (the 4.1.2 Navi2 set tiles pass11 8x4). |
 | Menu-label BeamNG mod (`bng_fsr4_linux.zip`) | GPL-2.0-or-later (same as the layer) | Adds one translation key and relabels one menu entry at runtime; overrides no game file |
-| FSR 4.1.1 shader programs and model weights (`assets/`) | AMD's MIT exception for `amd_fidelityfx_upscaler_dx12.dll` (FidelityFX SDK 2.3.0) | Modified (DXIL→SPIR-V, bindings); not an AMD-signed distribution. Ship `notices/AMD-SDK-LICENSE.md` and `assets/NOTICE.md` |
+| FSR 4.1.2 shader programs and model weights (`assets/`, `assets/navi2/`) | AMD's MIT exception for `amd_fidelityfx_upscaler_dx12.dll` (FSR SDK 2.4.0) | Modified (DXIL→SPIR-V, bindings); not an AMD-signed distribution. Ship `notices/AMD-SDK-LICENSE.md` and `assets/NOTICE.md` |
 | dxil-spirv (asset preparation only) | MIT | Not part of the runtime |
 
 ## Obligations when distributing
@@ -32,7 +32,7 @@ its own it only changes a label. It needs the layer.
 
 ## Credits
 
-- AMD: FSR 4.1.1 and the FidelityFX SDK.
+- AMD: FSR 4.1.2 and the FSR (FidelityFX) SDK.
 - deadinside28: bbport, the original Vulkan FSR 4 implementation.
 - johnpanos: the standalone FSR-4.1.1-linux port and its verification tooling.
 - daniel-h-0: bc250-fsr4-fork patches used for reference-DLL preparation.

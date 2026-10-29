@@ -19,6 +19,16 @@ Done:
       sniper container; the layer, the Steam overlay and Fossilize are all loaded; 10,801 frames replaced in
       gridmap, hard 0, jitter mismatches 0, no amdgpu errors
 
+0.2.0 (FSR 4.1.2):
+- [x] Generic and Navi2 INT8 sets captured from the SDK 2.4.0 DLL; each 7/7 byte-exact against it
+- [x] Ground-truth quality test (pan and static): same quality as 4.1.1; Navi2 2–3% less GPU time
+- [x] Layer picks `assets/navi2` on Navi 2x; `BNG_FSR4_VARIANT` overrides
+- [x] In-game (BeamNG 0.40.1.0): BeamNG loads the Navi2 set (`events.log`, SPIR-V identical), live frames equal
+      an offline replay (22/22), 10,801 frames hard 0, output-size change while running
+- [x] Installed package, direct launch with only `BNG_FSR4=1`: 1,801 frames replaced, hard 0
+- [x] Menu label reads "FSR 4.1.2 (Linux)"
+- [ ] Steam launch (not repeated; that path is unchanged since 0.1.0)
+
 Before a public release:
 - [ ] **Release build:** the package uses the lean mode (small log in `$XDG_CACHE_HOME/bng-fsr4`); the diagnostic
       code paths are still compiled in and could be removed behind a build flag

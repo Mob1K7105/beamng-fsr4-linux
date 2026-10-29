@@ -1,18 +1,21 @@
-# FSR 4.1.1 for BeamNG.drive on Linux (unofficial)
+# FSR 4.1.2 for BeamNG.drive on Linux (unofficial)
 
-Replaces the final stage of BeamNG.drive's built-in FSR upscaler with AMD FSR 4.1.1 (the machine-learning
+Replaces the final stage of BeamNG.drive's built-in FSR upscaler with AMD FSR 4.1.2 (the machine-learning
 upscaler) in the **native Linux** version of the game. It runs as a Vulkan layer: no Wine, Proton or
 DirectX, and no game files are modified.
 
-> **Status: early release (0.1.0).** Tested on one system (RX 6700 XT, Mesa RADV, BeamNG 0.40, launched from
+> **Status: early release (0.2.0).** Tested on one system (RX 6700 XT, Mesa RADV, BeamNG 0.40, launched from
 > Steam). Other GPUs are untested; reports are welcome (see [Reporting problems](#reporting-problems)).
 > Unofficial, not affiliated with or endorsed by AMD or BeamNG GmbH.
 
 ## What you get
 
-- **The real FSR 4.1.1 network.** The shaders and weights derive from AMD's signed FSR 4.1.1 DLL
-  (FidelityFX SDK 2.3.0, INT8 path). On the test GPU the Vulkan port matches AMD's DLL byte for byte, and
-  the frames shown in-game match that port byte for byte. See [docs/VERIFICATION.md](docs/VERIFICATION.md).
+- **The real FSR 4.1.2 network.** The shaders and weights derive from AMD's signed FSR 4.1.2 DLL
+  (FSR SDK 2.4.0, INT8 path). On the test GPU the Vulkan port matches AMD's DLL byte for byte. See
+  [docs/VERIFICATION.md](docs/VERIFICATION.md).
+- **AMD's RDNA 2 kernels on RX 6000 cards.** FSR 4.1.2 adds an INT8 provider of its own for Navi 2x. It runs the
+  same model as the generic INT8 path, about 2% faster on an RX 6700 XT, with the same image quality. The layer
+  picks it on Navi 2x as AMD's DLL does; other GPUs get the generic INT8 kernels.
 - **Image quality instead of speed.** On RDNA 2, FSR 4 costs more GPU time than BeamNG's FSR 3. Use it
   for a cleaner image, or pair it with a lower render scale. Measured numbers are in
   [docs/PERFORMANCE.md](docs/PERFORMANCE.md).
@@ -23,9 +26,9 @@ DirectX, and no game files are modified.
 
 | | |
 |---|---|
-| Game | BeamNG.drive **0.40.0.0**, native Linux build (`BinLinux/BeamNG.drive.x64`), Vulkan renderer |
-| In-game setting | Anti-aliasing: **FSR 3 (custom)**, i.e. BeamNG's `fsrCustom` upscaler, at any render scale (shown as "FSR 4.1.1 (Linux)" with the menu-label mod) |
-| GPU | AMD RDNA 2 or newer on Mesa RADV (tested: RX 6700 XT, Mesa 26.2.4) |
+| Game | BeamNG.drive **0.40.1.0** (also 0.40.0.0), native Linux build (`BinLinux/BeamNG.drive.x64`), Vulkan renderer |
+| In-game setting | Anti-aliasing: **FSR 3 (custom)**, i.e. BeamNG's `fsrCustom` upscaler, at any render scale (shown as "FSR 4.1.2 (Linux)" with the menu-label mod) |
+| GPU | AMD RDNA 2 or newer on Mesa RADV (tested: RX 6700 XT, Mesa 26.2.5) |
 | Vulkan features | 1.3, shaderInt8, shaderIntegerDotProduct, 16-bit arithmetic, `VK_KHR_push_descriptor`, `VK_KHR_compute_shader_derivatives`; `VK_VALVE_shader_mixed_float_dot_product` used when present |
 | Output size | Up to 3840×2160 |
 
@@ -49,7 +52,7 @@ BNG_FSR4=1 %command%
 ```
 
 **3. In the game:** Options → Graphics → Anti-aliasing: **FSR 3 (custom)**, at any render scale. With the
-included menu mod it reads **FSR 4.1.1 (Linux)** while FSR 4 runs. The Sharpness slider still works.
+included menu mod it reads **FSR 4.1.2 (Linux)** while FSR 4 runs. The Sharpness slider still works.
 
 To uninstall: `~/.local/share/bng-fsr4/uninstall.sh`, then remove the launch option. Options, logs and
 troubleshooting: [docs/INSTALL.md](docs/INSTALL.md).
@@ -79,6 +82,6 @@ cd beamng-fsr4-linux
 
 ## Licensing and credits
 
-The layer links GPL-2.0-or-later code and is therefore GPL-2.0-or-later. The FSR 4.1.1 shader/model
+The layer links GPL-2.0-or-later code and is therefore GPL-2.0-or-later. The FSR 4.1.2 shader/model
 assets are distributed under AMD's MIT exception for the upscaler DLL. Details and full credits are in
 [docs/LICENSING.md](docs/LICENSING.md).

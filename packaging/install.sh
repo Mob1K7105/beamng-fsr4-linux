@@ -51,7 +51,7 @@ cat <<'MSG'
 Next steps:
   1. Steam > BeamNG.drive > Properties > Launch Options:   BNG_FSR4=1 %command%
   2. In the game: Options > Graphics > Anti-aliasing: "FSR 3 (custom)"
-     (shown as "FSR 4.1.1 (Linux)" while the layer runs and the menu label mod is enabled).
+     (shown as "FSR 4.1.2 (Linux)" while the layer runs and the menu label mod is enabled).
   3. The log is in ~/.cache/bng-fsr4/events.log. Look for "FSR4: frames replaced".
 To remove everything: ~/.local/share/bng-fsr4/uninstall.sh
 MSG
