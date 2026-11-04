@@ -30,6 +30,12 @@ Done:
 - [x] Steam launch on BeamNG 0.40.4.0 (Steam Linux Runtime sniper, overlay and Fossilize loaded): 10,801
       frames replaced in gridmap, hard 0
 
+0.2.1 (output above 3840×2160):
+- [x] The DLL's third (t4320) set, both INT8 providers, captured and extracted; 8/8 byte-exact each above 4K
+      (5120×2880 in three render sizes, ultrawide, 3840×2400, 7680×4320), and 7/7 each for the 0.2.0 cases
+- [x] Output above 7680×4320: FSR 3 while it lasts (no longer FSR 3 for the rest of the session)
+- [ ] In-game at 5120×2880 (not run: offline only)
+
 Before a public release:
 - [ ] **Release build:** the package uses the lean mode (small log in `$XDG_CACHE_HOME/bng-fsr4`); the diagnostic
       code paths are still compiled in and could be removed behind a build flag

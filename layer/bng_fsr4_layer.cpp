@@ -901,6 +901,8 @@ bool F4TryReplaceRcas(VkCommandBuffer c) {
     if (!strcmp(reject, "binding") || !BoundView(c, 31, &ov, &oi, &oinf, &ol) || ol != VK_IMAGE_LAYOUT_GENERAL) return fail("output binding unexpected");
     if (!strcmp(reject, "size")) oinf.w ^= 1;
     if (!strcmp(reject, "format")) oinf.fmt = VK_FORMAT_UNDEFINED;
+    // Above 7680x4320 (AMD's limit) FSR 3 runs, for as long as the output stays that large.
+    if (!Fsr411::Upscaler::SupportsOutput(oinf.w, oinf.h)) return fail("output size above 7680x4320");
     if (!g_f4.have_offset || !g_f4.seq_len) { if (!soft_fail("no CB readback yet")) return false; }
     else if (g_in.cinf.w != g_f4.rw || g_in.cinf.h != g_f4.rh || oinf.w != g_f4.ow || oinf.h != g_f4.oh) { if (!soft_fail("size mismatch with CB")) return false; }
     if (g_in.cinf.fmt != 97 && g_in.cinf.fmt != VK_FORMAT_R16G16B16A16_SFLOAT) return fail("color format");

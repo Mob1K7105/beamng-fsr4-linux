@@ -31,6 +31,27 @@ constexpr uint32_t kPassCount = sizeof(kPasses) / sizeof(kPasses[0]);
 /// Tensor level (1/2^level of the aligned output) a model pass runs at, and of its _post pass.
 constexpr uint32_t kRunLevel[13] = {1, 1, 1, 2, 2, 2, 3, 3, 3, 3, 2, 2, 1};
 constexpr uint32_t kPostLevel[13] = {1, 1, 1, 2, 2, 2, 3, 3, 3, 2, 2, 1, 1};
+/// AMD's asset tiers by output size, as the DLL picks them: the largest output each set was compiled for
+/// (its shaders hold clamps, strides and tensor offsets for it as constants) and the scratch buffer the
+/// DLL allocates for it. The DLL refuses a context above 7680x4320 (4.1.2, checked 2026-11-04).
+struct Tier {
+    const char* name;
+    uint32_t max_w, max_h;
+    VkDeviceSize scratch;
+};
+constexpr Tier kTiers[] = {
+    {"t1080", 1920, 1080, 20880256u},
+    {"t2160", 3840, 2160, 83232256u},
+    {"t4320", 7680, 4320, 332352256u},
+};
+const Tier* TierFor(uint32_t ow, uint32_t oh) {
+    for (const Tier& t : kTiers) {
+        if (ow <= t.max_w && oh <= t.max_h) {
+            return &t;
+        }
+    }
+    return nullptr;
+}
 /// Required subgroup size per pass when the device allows it (0: the driver's choice). Measured on
 /// RDNA 2 / RADV (1707x960 -> 2560x1440): wave32 is faster for the image passes, wave64 (RADV's
 /// default) for the model passes; the output is byte identical either way. 2.666 -> 2.628 ms.
@@ -540,7 +561,7 @@ struct Upscaler::Impl {
         return true;
     }
 
-    bool Create(const std::string& wanted, uint32_t ow, uint32_t oh, bool tier2160) {
+    bool Create(const std::string& wanted, uint32_t ow, uint32_t oh, const Tier& tier) {
         Destroy();
         if (!push_descriptors) {
             error = "VK_KHR_push_descriptor is required";
@@ -568,7 +589,7 @@ struct Upscaler::Impl {
             error = "missing or wrong " + dir + "/" + set + "/initializer.bin";
             return false;
         }
-        const VkDeviceSize scratch_size = tier2160 ? 83232256u : 20880256u;
+        const VkDeviceSize scratch_size = tier.scratch;
         if (!MakeImage(recurrent, VK_FORMAT_R8G8B8A8_UNORM, ow, oh) ||
             !MakeImage(history, VK_FORMAT_R16G16B16A16_SFLOAT, ow, oh) ||
             !MakeImage(reprojected, VK_FORMAT_R16G16B16A16_SFLOAT, ow, oh) ||
@@ -638,16 +659,16 @@ struct Upscaler::Impl {
         error.clear();
         const uint32_t ow = f.output.width, oh = f.output.height;
         const uint32_t rw = f.render_width, rh = f.render_height;
-        if (!ow || !oh || !rw || !rh || rw > ow || rh > oh || ow > 3840 || oh > 2160) {
+        const Tier* tier = TierFor(ow, oh);
+        if (!ow || !oh || !rw || !rh || rw > ow || rh > oh || !tier) {
             error = "unsupported size " + std::to_string(rw) + "x" + std::to_string(rh) + " -> " +
                     std::to_string(ow) + "x" + std::to_string(oh);
             return false;
         }
-        const bool tier2160 = ow > 1920 || oh > 1080;
-        const std::string wanted = std::string(tier2160 ? "t2160" : "t1080") +
+        const std::string wanted = std::string(tier->name) +
                                    (f.ultra_performance ? "_m1" : "_m0");
         if (!ready || wanted != set || ow != out_w || oh != out_h) {
-            if (!Create(wanted, ow, oh, tier2160)) {
+            if (!Create(wanted, ow, oh, *tier)) {
                 Destroy();
                 return false;
             }
@@ -807,8 +828,8 @@ struct Upscaler::Impl {
                 // rest) from the tensor size and the tier's allocation.
                 const uint32_t level = p.k ? kPostLevel[p.k] : 1;
                 const uint32_t w = aw >> level, h = ah >> level;
-                const uint32_t tw = (tier2160 ? 3840u : 1920u) >> level;
-                const uint32_t th = (tier2160 ? 2160u : 1080u) >> level;
+                const uint32_t tw = tier->max_w >> level;
+                const uint32_t th = tier->max_h >> level;
                 const uint32_t kx = std::min(tw + 1 - w, 5u), ky = std::min(th + 1 - h, 1u);
                 const uint32_t threads = (w + 1 + kx) + h + h * kx + (w + 1 + kx) * ky;
                 gx = CeilDiv(threads, p.refl.local_size[0]);
@@ -847,6 +868,10 @@ Upscaler::~Upscaler() = default;
 
 bool Upscaler::Record(const Frame& frame) {
     return impl->Record(frame);
+}
+
+bool Upscaler::SupportsOutput(uint32_t width, uint32_t height) noexcept {
+    return width && height && TierFor(width, height) != nullptr;
 }
 
 const std::string& Upscaler::Error() const noexcept {

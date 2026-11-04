@@ -42,7 +42,7 @@ struct Frame {
 
 class Upscaler {
 public:
-    /// `dir`: the asset sets (t1080_m0 ... t2160_m1). `mixed_float_dot`: the device enabled
+    /// `dir`: the asset sets (t1080_m0 ... t4320_m1). `mixed_float_dot`: the device enabled
     /// VK_VALVE_shader_mixed_float_dot_product (shaderMixedFloatDotProductFloat16AccFloat32);
     /// without it the prepass loads prepass_portable.spv (tools/portable_dot.py), core SPIR-V.
     /// `subgroup_size_control`: the device enabled subgroupSizeControl and allows required sizes
@@ -54,6 +54,8 @@ public:
     /// Records one upscale; false with Error() set when it cannot (assets, device, sizes).
     bool Record(const Frame& frame);
     [[nodiscard]] const std::string& Error() const noexcept;
+    /// Whether an output size has an asset set (t1080, t2160, t4320: AMD's DLL goes up to 7680x4320).
+    [[nodiscard]] static bool SupportsOutput(uint32_t width, uint32_t height) noexcept;
     /// The asset set and sizes in use, for logs ("t2160_m0 2260x1272 -> 3840x2160").
     [[nodiscard]] std::string Describe() const;
 

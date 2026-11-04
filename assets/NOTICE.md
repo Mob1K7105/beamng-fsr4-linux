@@ -17,6 +17,6 @@ the generic one (`ffxProvider_FSR4_Int8`, chosen for RDNA 3 and 3.5). `navi2/` h
 the RDNA 2 one (`ffxProvider_FSR4_Int8_Navi2`, chosen for Navi 2x GPUs): its own
 kernels, with pass11 tiled 8x4 instead of 64x1. The layer loads `navi2/` on Navi 2x.
 
-`t1080` covers output up to 1920x1080; `t2160` covers larger output up to
-3840x2160. `m0` serves ratios through 2x; `m1` is the 3x Ultra Performance model.
+`t1080` covers output up to 1920x1080, `t2160` up to 3840x2160 and `t4320` larger output up to
+7680x4320 (AMD's DLL picks them the same way and creates no context above 7680x4320). `m0` serves ratios through 2x; `m1` is the 3x Ultra Performance model.
 The package's SHA256SUMS lists every file.

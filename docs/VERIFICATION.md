@@ -1,5 +1,19 @@
 # Verification: is it really FSR 4?
 
+## 0.2.1: output above 3840×2160 (up to 7680×4320)
+
+Run on an RX 6700 XT, Mesa RADV, on 2026-11-04, offline only (the game was not started).
+
+1. **AMD's DLL has a third shader set.** Above 3840 wide or 2160 high it runs other kernels (27 of 30
+   shaders differ from the 2160 set) with a 332 MB scratch buffer, and it creates no context above
+   7680×4320. The 1080 and 2160 sets have their largest output compiled in, which is why 0.2.0 stopped
+   at 3840×2160. The new set was captured for both INT8 providers and translated as before; its weights
+   are the same `initializer.bin`.
+2. **AMD's DLL ≡ the Vulkan port above 4K.** 8 cases per provider, both models: 5120×2880 (from 3413×1920,
+   2970×1670 and 1707×960), 5120×1440, 3840×2400, 5120×2160 and 7680×4320 (from 5120×2880 and 2560×1440):
+   **8/8 byte-identical for the Navi2 set, 8/8 for the generic set.**
+3. **Nothing else changed.** The 7 cases of 0.2.0 again with the new backend: 7/7 for each set.
+
 ## 0.2.0: FSR 4.1.2 (FSR SDK 2.4.0)
 
 Run on an RX 6700 XT (RDNA 2), Mesa 26.2.5 RADV, BeamNG.drive 0.40.1.0 (step 9: 0.40.4.0), on 2026-10-29.

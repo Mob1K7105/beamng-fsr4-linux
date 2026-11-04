@@ -4,7 +4,7 @@ Replaces the final stage of BeamNG.drive's built-in FSR upscaler with AMD FSR 4.
 upscaler) in the **native Linux** version of the game. It runs as a Vulkan layer: no Wine, Proton or
 DirectX, and no game files are modified.
 
-> **Status: early release (0.2.0).** Tested on one system (RX 6700 XT, Mesa RADV, BeamNG 0.40, launched from
+> **Status: early release (0.2.1).** Tested on one system (RX 6700 XT, Mesa RADV, BeamNG 0.40, launched from
 > Steam). Other GPUs are untested; reports are welcome (see [Reporting problems](#reporting-problems)).
 > Unofficial, not affiliated with or endorsed by AMD or BeamNG GmbH.
 
@@ -30,7 +30,7 @@ DirectX, and no game files are modified.
 | In-game setting | Anti-aliasing: **FSR 3 (custom)**, i.e. BeamNG's `fsrCustom` upscaler, at any render scale (shown as "FSR 4.1.2 (Linux)" with the menu-label mod) |
 | GPU | AMD RDNA 2 or newer on Mesa RADV (tested: RX 6700 XT, Mesa 26.2.5) |
 | Vulkan features | 1.3, shaderInt8, shaderIntegerDotProduct, 16-bit arithmetic, `VK_KHR_push_descriptor`, `VK_KHR_compute_shader_derivatives`; `VK_VALVE_shader_mixed_float_dot_product` used when present |
-| Output size | Up to 3840×2160 |
+| Output size | Up to 7680×4320 (AMD's limit; e.g. 5120×2880) |
 
 Other GPUs and drivers are untested; see [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md).
 
