@@ -26,7 +26,7 @@ it does nothing in programs other than BeamNG.drive.
 
 1. Steam → BeamNG.drive → Properties → Launch Options: `BNG_FSR4=1 %command%`
 2. In the game: Options → Graphics → Anti-aliasing: **FSR 3 (custom)**. With the menu-label mod enabled,
-   this entry reads **FSR 4.1.2 (Linux)** while the layer runs. Pick any render scale; FSR 4 replaces
+   this entry reads **FSR 4.1.2 (Linux)** while the layer runs (**FSR 4.1.2 Lite (Linux)** with `BNG_FSR4_VARIANT=lite`). Pick any render scale; FSR 4 replaces
    FSR 3's output at all of them.
 3. The game's Sharpness slider also controls FSR 4's sharpening.
 
@@ -56,6 +56,7 @@ Launching without Steam works too:
 | `BNG_FSR4_NO_SHARPEN=1` | no FSR 4 sharpening |
 | `BNG_FSR4_KEEP_FSR3=1` | keep running FSR 3's passes under FSR 4 (about 1.2 ms slower; for comparison) |
 | `BNG_FSR4_VARIANT=generic` / `navi2` | INT8 kernels to use. Default: `navi2` on Radeon RX 6000 (Navi 2x), `generic` on other GPUs |
+| `BNG_FSR4_VARIANT=lite` | FSR 4.1.2 Lite, AMD's smaller network (about a third less GPU time, a slightly different picture). Steam launch option: `BNG_FSR4=1 BNG_FSR4_VARIANT=lite %command%` |
 | `BNG_FSR4_DISABLE=1` | force the layer off |
 | `BNG_FSR4_USERFOLDER=…` | BeamNG user folder, if it is not `~/.local/share/BeamNG/BeamNG.drive/current` (used for the menu-label status) |
 

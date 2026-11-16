@@ -9,8 +9,14 @@ AMD's complete notice and MIT exception for that DLL are retained in
 Each set has 29 SPIR-V programs, an unmodified 128 KiB neural initializer and
 an original postpass for comparison. They were captured from AMD's INT8 path,
 translated from DXIL with dxil-spirv, and assigned Vulkan descriptor bindings.
-The postpass store pattern is rewritten by bbport's postpass_lds.py; its original
-arithmetic is retained. These are modified assets, not an AMD-signed distribution.
+Since 0.3.0 the postpass store pattern is rewritten by postpass_direct.py and the network
+passes by model_clamp.py/model_tail.py (tools/exact-rewrites/, from fsr4-shader-performance-overrides,
+GPL-2.0-or-later); the output is byte-identical to AMD's DLL. These are modified assets, not an
+AMD-signed distribution.
+
+`lite/` holds FSR 4.1.2 Lite (`ffxProvider_FSR4Lite_Int8`, which the DLL picks for Strix Point class
+APUs; captured by reporting that GPU family to the DLL): 14 SPIR-V programs per set and its own
+27 KiB initializer per model. Its postpass is AMD's (postpass.spv = postpass_orig.spv).
 
 The DLL has two INT8 providers that run the same model. The sets in this folder are
 the generic one (`ffxProvider_FSR4_Int8`, chosen for RDNA 3 and 3.5). `navi2/` holds

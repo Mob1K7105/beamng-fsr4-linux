@@ -36,6 +36,16 @@ Done:
 - [x] Output above 7680×4320: FSR 3 while it lasts (no longer FSR 3 for the rest of the session)
 - [ ] In-game at 5120×2880 (not run: offline only)
 
+0.3.0 (exact rewrites, FSR 4.1.2 Lite):
+- [x] Rewritten navi2 and generic sets 7/7 byte-exact each against the DLL; same output as 0.2.1 above 4K
+- [x] Lite captured (14 sizes), extracted with every rule checked, 11/11 byte-exact against the DLL
+- [x] `tools/exact-rewrites/apply.sh` rebuilds the shipped shaders from 0.2.1's byte for byte
+- [x] In-game run of 0.3.0 (2026-11-16, installed package, BeamNG 0.40.4.0, Mesa 26.2.6): default (Navi2), Lite and
+      generic each load the right set, frames replaced with hard 0, frame dumps clean; frozen scene at 58%:
+      FSR 4 95.4 fps, Lite 103.1, FSR 3 106.3; upscale step 2.30 / 1.48 / 2.33 ms (Navi2 / Lite / generic)
+- [ ] Live-vs-offline byte-exact replay for 0.3.0 (done for 0.2.0; 0.3.0 shaders are byte-exact offline)
+- [ ] Menu label "FSR 4.1.2 Lite (Linux)" checked in-game
+
 Before a public release:
 - [ ] **Release build:** the package uses the lean mode (small log in `$XDG_CACHE_HOME/bng-fsr4`); the diagnostic
       code paths are still compiled in and could be removed behind a build flag

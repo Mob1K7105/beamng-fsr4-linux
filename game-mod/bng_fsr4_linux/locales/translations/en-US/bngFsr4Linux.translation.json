@@ -1,3 +1,4 @@
 {
-    "ui.options.graphics.antialiasMode.bngFsr4Linux": "FSR 4.1.2 (Linux)"
+    "ui.options.graphics.antialiasMode.bngFsr4Linux": "FSR 4.1.2 (Linux)",
+    "ui.options.graphics.antialiasMode.bngFsr4LinuxLite": "FSR 4.1.2 Lite (Linux)"
 }

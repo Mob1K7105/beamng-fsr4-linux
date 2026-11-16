@@ -16,9 +16,21 @@
   processed them once for about a minute ("Processing Vulkan shaders").
 - **Not tested:** MangoHud or gamescope active together with the layer (both were loaded but not switched on),
   the Steam overlay drawn in-game (it loaded and the game ran normally), GPUs other than the RX 6700 XT,
-  RDNA 3/4, NVIDIA (no `VK_VALVE_shader_mixed_float_dot_product`: the portable path is not bit-exact),
+  RDNA 3, RDNA 4 (one user report, below), NVIDIA (no `VK_VALVE_shader_mixed_float_dot_product`: the portable path is not bit-exact),
   Intel, outputs other than 2560×1440, HDR, VR, multi-monitor. The generic INT8 set (used on GPUs other than
   Navi 2x) was verified on the RX 6700 XT only, by forcing it with `BNG_FSR4_VARIANT=generic`.
+- **High output resolutions cost much more.** FSR 4's cost follows the output size: at 5120×1440 it is about
+  twice the 1440p cost (4.8 ms on an RX 6700 XT, 3.3 ms with Lite), and it can eat most of what a lower
+  render scale saves. See [PERFORMANCE.md](PERFORMANCE.md), "High output resolutions".
+- **RDNA 3 and RDNA 4 run the INT8 generic set.** There is no FP8 path, so RDNA 4 does not use its FP8
+  hardware. One RX 9060 XT report (5120×1440) showed FSR 4 running correctly on the generic set, but with a
+  high GPU cost.
+- **0.3.0 in-game:** run on 2026-11-16 (default, Lite and generic sets, installed package, BeamNG 0.40.4.0):
+  frames replaced, hard 0, clean output in frame dumps. A live-vs-offline byte-exact replay was not repeated for
+  0.3.0; the shaders were checked byte-exact against AMD's DLL offline (docs/VERIFICATION.md).
+- **Lite is a different network.** A third-party comparison (fsr4-shader-performance-overrides, docs/lite-builds.md)
+  found it slightly less accurate on still images, better on some motion (thin detail, swaying foliage) and worse
+  on others (ghosting beside moving objects, fades).
 - **Image-quality verdict under motion** is still open. Static scenes look clean, and a wrong-sign
   motion-vector test confirmed the motion handling. A systematic side-by-side in motion has not been done.
 - **Diagnostic code is still compiled in.** In its default lean mode it only writes a short event log;

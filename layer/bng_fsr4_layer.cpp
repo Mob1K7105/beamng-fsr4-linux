@@ -858,11 +858,22 @@ void F4ProcessReadback() {
 // FSR 4.1.2 has two INT8 providers of the same model. AMD's DLL picks the Navi2 one for GPU family NV with a Navi 2x
 // revision (RX 6000) and the generic one otherwise; the layer does the same by PCI device ID (Navi 21-23: 0x73a0-0x73ff,
 // Navi 24: 0x7420-0x743f) and loads <assets>/navi2 when it exists. FSR4STUDY_VARIANT=generic|navi2 overrides.
+// FSR4STUDY_VARIANT=lite (BNG_FSR4_VARIANT=lite) loads <assets>/lite: FSR 4.1.2 Lite, AMD's smaller network
+// (a different picture, about half the cost), which the DLL itself runs on Strix Point class APUs. Opt-in only.
+static bool g_f4_lite = false; // the Lite set is loaded; reported in status.json for the menu label
 std::string F4AssetDir(const std::string& base) {
     VkPhysicalDeviceProperties pp; reinterpret_cast<PFN_vkGetPhysicalDeviceProperties>(g_gipa(g_instance, "vkGetPhysicalDeviceProperties"))(g_pd, &pp);
     const uint32_t id = pp.deviceID;
     const bool navi2x = pp.vendorID == 0x1002 && ((id >= 0x73a0 && id <= 0x73ff) || (id >= 0x7420 && id <= 0x743f));
     const char* v = getenv("FSR4STUDY_VARIANT");
+    if (v && !strcmp(v, "lite")) {
+        const std::string lite = base + "/lite";
+        struct stat ls{};
+        const bool have_lite = stat(lite.c_str(), &ls) == 0 && S_ISDIR(ls.st_mode);
+        Ev("FSR4: GPU %04x:%04x navi2x=%d variant=lite -> %s", pp.vendorID, id, int(navi2x), have_lite ? "Lite" : "INT8 (no lite assets)");
+        if (have_lite) { g_f4_lite = true; return lite; }
+        v = nullptr;
+    }
     const bool want = v && *v ? !strcmp(v, "navi2") : navi2x;
     const std::string dir = base + "/navi2";
     struct stat st{};
@@ -1347,8 +1358,8 @@ void WriteStatus() {
     }
     const bool ok = g_fsr4_features && !g_f4.failed;
     if (FILE* f = fopen(tmp.c_str(), "w")) {
-        fprintf(f, "{\"layer\":\"bng-fsr4\",\"time\":%lld,\"ok\":%s,\"replaced\":%llu,\"failopen\":%llu}\n", (long long)::time(nullptr),
-                ok ? "true" : "false", (unsigned long long)g_f4.used, (unsigned long long)g_f4.failopen);
+        fprintf(f, "{\"layer\":\"bng-fsr4\",\"time\":%lld,\"ok\":%s,\"replaced\":%llu,\"failopen\":%llu,\"variant\":\"%s\"}\n", (long long)::time(nullptr),
+                ok ? "true" : "false", (unsigned long long)g_f4.used, (unsigned long long)g_f4.failopen, g_f4_lite ? "lite" : "full");
         fclose(f); rename(tmp.c_str(), path.c_str());
     }
 }

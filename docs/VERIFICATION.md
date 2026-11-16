@@ -1,5 +1,23 @@
 # Verification: is it really FSR 4?
 
+## 0.3.0: exact shader rewrites, FSR 4.1.2 Lite
+
+Run on an RX 6700 XT, Mesa RADV, on 2026-11-06, offline only (the game was not started).
+
+1. **The rewritten shaders still equal AMD's DLL.** The shipped `assets/navi2` and `assets/` against the 4.1.2 DLL
+   (`verify412.py`, the 7 cases of 0.2.0, 8 noise frames): **7/7 byte-identical for each set.** The new runtime
+   with 0.2.1's shaders and with the rewritten ones gave the same output in 7 more cases per set above 4K
+   (5120×1440, 5120×2880, both models).
+2. **AMD's DLL has a third INT8 provider, `ffxProvider_FSR4Lite_Int8`.** Reporting a Strix Point GPU family
+   (`FSR4CAP_FAMILY=96:01`) makes the DLL run it: 12 dispatches per frame, 3 model passes, its own 27 KiB
+   weights per model, the same three size tiers. 14 captures (1600×900 to 7680×4320, both models) fixed the
+   dispatch rules; `extract.py … lite` checks every group count and tensor table against them.
+3. **AMD's DLL ≡ the port for Lite.** `verify_lite.py`, 11 cases from 1600×900 to 7680×4320 (5120×1440 from
+   2970×835 and, Ultra Performance, 1707×480), 8 noise frames: **11/11 byte-identical**, for the extracted set
+   and again for the shipped `assets/lite`. The first frame matched from the start. Later frames needed a
+   per-frame zero of the range pass1 reads (found by bisecting the scratch buffer; it is the level-2 tensor the
+   shaders place at the start of the third level-1 tensor).
+
 ## 0.2.1: output above 3840×2160 (up to 7680×4320)
 
 Run on an RX 6700 XT, Mesa RADV, on 2026-11-04, offline only (the game was not started).

@@ -30,6 +30,15 @@ provider) is used on Radeon RX 6000 (PCI device IDs 0x73a0–0x73ff and 0x7420�
 INT8 provider) on other GPUs. Both run the same model and weights. `events.log` records the choice
 (`FSR4: GPU … -> INT8 navi2`).
 
+`assets/lite/` (opt-in, `BNG_FSR4_VARIANT=lite`) is FSR 4.1.2 Lite, the DLL's `ffxProvider_FSR4Lite_Int8`, which
+AMD's DLL picks for Strix Point class APUs. It is a smaller network with its own weights (27 KB instead of 128 KB):
+3 model passes instead of 12, so 12 dispatches per frame instead of 29. Its rules (pass list, tensor levels, scratch
+sizes) are a second table in `fsr411.cpp`. Lite's pass1 also expects the start of the third tensor to be zero
+every frame, so the runtime clears that range before pass1. `events.log` reads `variant=lite -> Lite`.
+
+Since 0.3.0 the postpass and the network passes carry exact rewrites (`tools/exact-rewrites/`, from
+fsr4-shader-performance-overrides). They change how the work is scheduled, not the arithmetic.
+
 Shaders are identified by the engine's debug names plus SPIR-V hashes. A game update that changes them
 makes the layer fall back to FSR 3 automatically.
 

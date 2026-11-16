@@ -4,7 +4,7 @@ Replaces the final stage of BeamNG.drive's built-in FSR upscaler with AMD FSR 4.
 upscaler) in the **native Linux** version of the game. It runs as a Vulkan layer: no Wine, Proton or
 DirectX, and no game files are modified.
 
-> **Status: early release (0.2.1).** Tested on one system (RX 6700 XT, Mesa RADV, BeamNG 0.40, launched from
+> **Status: early release (0.3.0).** Tested on one system (RX 6700 XT, Mesa RADV, BeamNG 0.40, launched from
 > Steam). Other GPUs are untested; reports are welcome (see [Reporting problems](#reporting-problems)).
 > Unofficial, not affiliated with or endorsed by AMD or BeamNG GmbH.
 
@@ -16,6 +16,13 @@ DirectX, and no game files are modified.
 - **AMD's RDNA 2 kernels on RX 6000 cards.** FSR 4.1.2 adds an INT8 provider of its own for Navi 2x. It runs the
   same model as the generic INT8 path, about 2% faster on an RX 6700 XT, with the same image quality. The layer
   picks it on Navi 2x as AMD's DLL does; other GPUs get the generic INT8 kernels.
+- **About 7% less FSR 4 GPU time (0.3.0), same picture.** Exact shader rewrites from
+  [fsr4-shader-performance-overrides](https://github.com/zgauthier2000/fsr4-shader-performance-overrides) (the
+  postpass writes its images through workgroup memory, plus integer rounding in the network). The output stays
+  byte-identical to AMD's DLL.
+- **Optional: FSR 4.1.2 Lite (0.3.0).** `BNG_FSR4_VARIANT=lite` runs AMD's smaller FSR 4.1.2 network, which
+  AMD's DLL uses on Ryzen AI APUs. It costs about a third less GPU time than full FSR 4, but it is a different
+  network with a slightly different picture. It also matches AMD's DLL byte for byte.
 - **Image quality instead of speed.** On RDNA 2, FSR 4 costs more GPU time than BeamNG's FSR 3. Use it
   for a cleaner image, or pair it with a lower render scale. Measured numbers are in
   [docs/PERFORMANCE.md](docs/PERFORMANCE.md).
@@ -52,7 +59,7 @@ BNG_FSR4=1 %command%
 ```
 
 **3. In the game:** Options → Graphics → Anti-aliasing: **FSR 3 (custom)**, at any render scale. With the
-included menu mod it reads **FSR 4.1.2 (Linux)** while FSR 4 runs. The Sharpness slider still works.
+included menu mod it reads **FSR 4.1.2 (Linux)** while FSR 4 runs (**FSR 4.1.2 Lite (Linux)** with Lite). The Sharpness slider still works.
 
 To uninstall: `~/.local/share/bng-fsr4/uninstall.sh`, then remove the launch option. Options, logs and
 troubleshooting: [docs/INSTALL.md](docs/INSTALL.md).

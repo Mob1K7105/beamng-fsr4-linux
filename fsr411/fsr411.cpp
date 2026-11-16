@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // bbport: FSR 4.1.1 replay on Vulkan (fsr411.h). The frame is the DLL's 29 dispatches: SPD auto
 // exposure, prepass, pass0_post, model passes 1..12 each followed by its _post pass (tensor border
-// clears), postpass, RCAS. The rules for group counts, the tensor size table and the constants
+// clears), postpass, RCAS. A Lite set (FSR 4.1.2 Lite, 2026-11-06) has 12: see kLitePasses. The rules for group counts, the tensor size table and the constants
 // are the ones tools/fsr4cap/extract.py checks against the recorded D3D12 frames.
 
 #include "fsr411.h"
@@ -20,29 +20,73 @@ namespace Fsr411 {
 
 namespace {
 
-constexpr const char* kPasses[] = {
-    "spd",         "prepass",     "pass0_post",  "pass1",       "pass1_post",  "pass2",
-    "pass2_post",  "pass3",       "pass3_post",  "pass4",       "pass4_post",  "pass5",
-    "pass5_post",  "pass6",       "pass6_post",  "pass7",       "pass7_post",  "pass8",
-    "pass8_post",  "pass9",       "pass9_post",  "pass10",      "pass10_post", "pass11",
-    "pass11_post", "pass12",      "pass12_post", "postpass",    "rcas",
+/// One dispatch of a model's frame. lx, ly: a model pass runs one thread per element of
+/// (aligned output >> lx) x (aligned output >> ly), tiled by its workgroup; a _post pass clears the
+/// border of the tensor at level lx. wave: required subgroup size when the device allows it (0: the
+/// driver's choice). Measured on RDNA 2 / RADV (1707x960 -> 2560x1440): wave32 is faster for the
+/// image passes, wave64 (RADV's default) for the model passes; the output is byte identical either
+/// way. 2.666 -> 2.628 ms.
+struct PassDef {
+    const char* name;
+    uint8_t lx, ly;
+    uint8_t wave;
 };
-constexpr uint32_t kPassCount = sizeof(kPasses) / sizeof(kPasses[0]);
-/// Tensor level (1/2^level of the aligned output) a model pass runs at, and of its _post pass.
-constexpr uint32_t kRunLevel[13] = {1, 1, 1, 2, 2, 2, 3, 3, 3, 3, 2, 2, 1};
-constexpr uint32_t kPostLevel[13] = {1, 1, 1, 2, 2, 2, 3, 3, 3, 2, 2, 1, 1};
+/// FSR 4.1.1 / 4.1.2 INT8: 12 model passes, each followed by its _post pass.
+constexpr PassDef kFullPasses[] = {
+    {"spd", 0, 0, 32},        {"prepass", 0, 0, 32},    {"pass0_post", 1, 1, 0},  {"pass1", 1, 1, 0},
+    {"pass1_post", 1, 1, 0},  {"pass2", 1, 1, 0},       {"pass2_post", 1, 1, 0},  {"pass3", 2, 2, 0},
+    {"pass3_post", 2, 2, 0},  {"pass4", 2, 2, 0},       {"pass4_post", 2, 2, 0},  {"pass5", 2, 2, 0},
+    {"pass5_post", 2, 2, 0},  {"pass6", 3, 3, 0},       {"pass6_post", 3, 3, 0},  {"pass7", 3, 3, 0},
+    {"pass7_post", 3, 3, 0},  {"pass8", 3, 3, 0},       {"pass8_post", 3, 3, 0},  {"pass9", 3, 3, 0},
+    {"pass9_post", 2, 2, 0},  {"pass10", 2, 2, 0},      {"pass10_post", 2, 2, 0}, {"pass11", 2, 2, 0},
+    {"pass11_post", 1, 1, 0}, {"pass12", 1, 1, 0},      {"pass12_post", 1, 1, 0}, {"postpass", 0, 0, 32},
+    {"rcas", 0, 0, 32},
+};
+/// FSR 4.1.2 Lite INT8 (ffxProvider_FSR4Lite_Int8, which the DLL runs on Strix Point class APUs):
+/// 3 model passes; pass1 runs full width x quarter height (64x2 groups) and is followed by two border
+/// clears, level 1 and level 2 (pass1_post_b). Rules checked against 14 captures (extract.py lite).
+constexpr PassDef kLitePasses[] = {
+    {"spd", 0, 0, 32},       {"prepass", 0, 0, 32},     {"pass0_post", 1, 1, 0}, {"pass1", 0, 2, 0},
+    {"pass1_post", 1, 1, 0}, {"pass1_post_b", 2, 2, 0}, {"pass2", 2, 2, 0},      {"pass2_post", 2, 2, 0},
+    {"pass3", 2, 2, 0},      {"pass3_post", 1, 1, 0},   {"postpass", 0, 0, 32},  {"rcas", 0, 0, 32},
+};
+constexpr uint32_t kPassCount = sizeof(kFullPasses) / sizeof(kFullPasses[0]); ///< the most of any model
+/// Per model: its passes, the tensor size table (levels of the output aligned to 8; the rest of the
+/// 17 entries are zero), the initializer (weights) size and the scratch buffer per tier, as the DLL
+/// allocates them.
+struct ModelDef {
+    const char* name;
+    const PassDef* passes;
+    uint32_t pass_count;
+    uint8_t shift[17];
+    uint32_t tensors;
+    uint32_t init_size;
+    VkDeviceSize scratch[3];
+    /// Scratch range zeroed before pass `zero_before` every frame (0: none), per tier. Lite: pass1 expects
+    /// zeros in the level-2 tensor at the start of the third level-1 tensor, which pass3 of the previous frame
+    /// wrote (same base, larger level); with it the output equals the DLL's from the second frame on.
+    uint32_t zero_before;
+    VkDeviceSize zero_offset[3], zero_size[3];
+};
+constexpr ModelDef kFull{"int8", kFullPasses, kPassCount,
+                         {1, 0, 1, 1, 2, 2, 2, 3, 3, 3, 2, 2, 1, 1, 0, 0, 0}, 17, 131072,
+                         {20880256u, 83232256u, 332352256u}, 0, {}, {}};
+constexpr ModelDef kLite{"lite", kLitePasses, sizeof(kLitePasses) / sizeof(kLitePasses[0]),
+                         {1, 0, 1, 2, 2, 1, 0, 0, 0}, 9, 27392,
+                         {25027392u, 99820992u, 398707392u}, 3,
+                         {16684928u, 66547328u, 265804928u}, {2097664u, 8342464u, 33273664u}};
 /// AMD's asset tiers by output size, as the DLL picks them: the largest output each set was compiled for
 /// (its shaders hold clamps, strides and tensor offsets for it as constants) and the scratch buffer the
 /// DLL allocates for it. The DLL refuses a context above 7680x4320 (4.1.2, checked 2026-11-04).
 struct Tier {
     const char* name;
     uint32_t max_w, max_h;
-    VkDeviceSize scratch;
+    uint32_t index; ///< into ModelDef::scratch
 };
 constexpr Tier kTiers[] = {
-    {"t1080", 1920, 1080, 20880256u},
-    {"t2160", 3840, 2160, 83232256u},
-    {"t4320", 7680, 4320, 332352256u},
+    {"t1080", 1920, 1080, 0},
+    {"t2160", 3840, 2160, 1},
+    {"t4320", 7680, 4320, 2},
 };
 const Tier* TierFor(uint32_t ow, uint32_t oh) {
     for (const Tier& t : kTiers) {
@@ -52,11 +96,6 @@ const Tier* TierFor(uint32_t ow, uint32_t oh) {
     }
     return nullptr;
 }
-/// Required subgroup size per pass when the device allows it (0: the driver's choice). Measured on
-/// RDNA 2 / RADV (1707x960 -> 2560x1440): wave32 is faster for the image passes, wave64 (RADV's
-/// default) for the model passes; the output is byte identical either way. 2.666 -> 2.628 ms.
-constexpr uint32_t kWave[kPassCount] = {32, 32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                                        0,  0,  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 32, 32};
 /// What a binding is bound to, resolved from its name once when the pass loads.
 enum class Res : uint8_t {
     Sampler, InputColor, Velocity, Depth, History, Reprojected, Recurrent, ExposureRead,
@@ -261,6 +300,7 @@ struct Upscaler::Impl {
 
     // Current set and sizes.
     std::string set;
+    const ModelDef* model = &kFull;
     uint32_t out_w = 0, out_h = 0;
     bool ready = false;
     bool uploaded = false;
@@ -270,7 +310,7 @@ struct Upscaler::Impl {
         Reflection refl;
         std::vector<Res> res; ///< per refl.bindings entry
         Kind kind = Kind::Model;
-        uint32_t k = 0; ///< model layer of a Model or Post pass
+        uint32_t lx = 0, ly = 0; ///< PassDef levels
         VkDescriptorSetLayout set_layout = VK_NULL_HANDLE;
         VkPipelineLayout layout = VK_NULL_HANDLE;
         VkPipeline pipeline = VK_NULL_HANDLE;
@@ -344,7 +384,7 @@ struct Upscaler::Impl {
         std::printf("FSR 4.1.1 profile: %.3f ms/frame\n", total / 300.0);
         for (uint32_t p = 0; p < kPassCount; ++p) {
             if (profile_ms[p] > 0.0) {
-                std::printf("  %6.3f ms/frame  %s\n", profile_ms[p] / 300.0, kPasses[p]);
+                std::printf("  %6.3f ms/frame  %s\n", profile_ms[p] / 300.0, model->passes[p].name);
             }
             profile_ms[p] = 0.0;
         }
@@ -475,7 +515,8 @@ struct Upscaler::Impl {
 
     bool LoadPass(uint32_t index) {
         std::vector<uint8_t> bytes;
-        const std::string name = kPasses[index];
+        const PassDef& def = model->passes[index];
+        const std::string name = def.name;
         const std::string file = name == "prepass" && !mixed_float_dot ? "prepass_portable" : name;
         const std::string path = dir + "/" + set + "/" + file + ".spv";
         if (!ReadFile(path, bytes) || bytes.size() % 4) {
@@ -508,9 +549,8 @@ struct Upscaler::Impl {
                  : name == "rcas"     ? Kind::Rcas
                  : name.ends_with("_post") ? Kind::Post
                                            : Kind::Model;
-        p.k = p.kind == Kind::Post ? (name == "pass0_post" ? 0 : uint32_t(std::stoi(name.substr(4))))
-              : p.kind == Kind::Model ? uint32_t(std::stoi(name.substr(4)))
-                                      : 0;
+        p.lx = def.lx;
+        p.ly = def.ly;
         std::vector<VkDescriptorSetLayoutBinding> bindings;
         for (const Binding& b : p.refl.bindings) {
             VkDescriptorSetLayoutBinding lb{};
@@ -548,8 +588,8 @@ struct Upscaler::Impl {
         pci.layout = p.layout;
         VkPipelineShaderStageRequiredSubgroupSizeCreateInfo wave{
             VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_REQUIRED_SUBGROUP_SIZE_CREATE_INFO};
-        if (subgroup_size_control && kWave[index]) {
-            wave.requiredSubgroupSize = kWave[index];
+        if (subgroup_size_control && def.wave) {
+            wave.requiredSubgroupSize = def.wave;
             pci.stage.pNext = &wave;
         }
         const VkResult r = vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &pci, nullptr, &p.pipeline);
@@ -579,17 +619,20 @@ struct Upscaler::Impl {
             error = "sampler creation failed";
             return false;
         }
-        for (uint32_t i = 0; i < kPassCount; ++i) {
+        // A Lite set (FSR 4.1.2 Lite) has the second pass1 border clear; the INT8 sets do not.
+        std::vector<uint8_t> probe;
+        model = ReadFile(dir + "/" + set + "/pass1_post_b.spv", probe) ? &kLite : &kFull;
+        for (uint32_t i = 0; i < model->pass_count; ++i) {
             if (!LoadPass(i)) {
                 return false;
             }
         }
         if (!ReadFile(dir + "/" + set + "/initializer.bin", initializer_data) ||
-            initializer_data.size() != 131072) {
+            initializer_data.size() != model->init_size) {
             error = "missing or wrong " + dir + "/" + set + "/initializer.bin";
             return false;
         }
-        const VkDeviceSize scratch_size = tier.scratch;
+        const VkDeviceSize scratch_size = model->scratch[tier.index];
         if (!MakeImage(recurrent, VK_FORMAT_R8G8B8A8_UNORM, ow, oh) ||
             !MakeImage(history, VK_FORMAT_R16G16B16A16_SFLOAT, ow, oh) ||
             !MakeImage(reprojected, VK_FORMAT_R16G16B16A16_SFLOAT, ow, oh) ||
@@ -600,9 +643,9 @@ struct Upscaler::Impl {
             !MakeImage(spd_mip5, VK_FORMAT_R32_SFLOAT, CeilDiv(ow, 16), CeilDiv(oh, 16)) ||
             !MakeBuffer(scratch, scratch_size,
                         VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, false) ||
-            !MakeBuffer(initializer, 131072,
+            !MakeBuffer(initializer, model->init_size,
                         VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, false) ||
-            !MakeBuffer(staging, 131072, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, true) ||
+            !MakeBuffer(staging, model->init_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, true) ||
             !MakeBuffer(ubo, kFramesInFlight * 4 * ubo_align, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, true) ||
             !MakeBuffer(tensor_ubo, 512, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, true)) {
             return false;
@@ -610,12 +653,11 @@ struct Upscaler::Impl {
         std::memcpy(staging.mapped, initializer_data.data(), initializer_data.size());
         // Tensor sizes (17 x uint4): levels of the output aligned to 8.
         const uint32_t aw = (ow + 7) & ~7u, ah = (oh + 7) & ~7u;
-        static constexpr uint32_t kShift[17] = {1, 0, 1, 1, 2, 2, 2, 3, 3, 3, 2, 2, 1, 1, 0, 0, 0};
         auto* sizes = static_cast<uint32_t*>(tensor_ubo.mapped);
         std::memset(sizes, 0, 512);
-        for (uint32_t i = 0; i < 17; ++i) {
-            sizes[i * 4 + 0] = aw >> kShift[i];
-            sizes[i * 4 + 1] = ah >> kShift[i];
+        for (uint32_t i = 0; i < model->tensors; ++i) {
+            sizes[i * 4 + 0] = aw >> model->shift[i];
+            sizes[i * 4 + 1] = ah >> model->shift[i];
         }
         ready = true;
         previous_pre_exposure = 0.0f;
@@ -645,7 +687,7 @@ struct Upscaler::Impl {
         }
         vkCmdClearColorImage(cmd, exposure_identity.image, VK_IMAGE_LAYOUT_GENERAL, &one, 1, &range);
         vkCmdFillBuffer(cmd, scratch.buffer, 0, VK_WHOLE_SIZE, 0);
-        const VkBufferCopy copy{0, 0, 131072};
+        const VkBufferCopy copy{0, 0, model->init_size};
         vkCmdCopyBuffer(cmd, staging.buffer, initializer.buffer, 1, &copy);
         VkMemoryBarrier mb{VK_STRUCTURE_TYPE_MEMORY_BARRIER};
         mb.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
@@ -754,8 +796,20 @@ struct Upscaler::Impl {
         between.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
         between.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
         // Earlier work of the caller on the inputs (render, copies) is the caller's barrier.
-        for (uint32_t index = 0; index < kPassCount; ++index) {
+        for (uint32_t index = 0; index < model->pass_count; ++index) {
             const Pass& p = passes[index];
+            if (model->zero_before && index == model->zero_before) {
+                VkMemoryBarrier zb{VK_STRUCTURE_TYPE_MEMORY_BARRIER};
+                zb.srcAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+                zb.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+                vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 1,
+                                     &zb, 0, nullptr, 0, nullptr);
+                vkCmdFillBuffer(cmd, scratch.buffer, model->zero_offset[tier->index], model->zero_size[tier->index], 0);
+                zb.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+                zb.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+                vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 1,
+                                     &zb, 0, nullptr, 0, nullptr);
+            }
             if ((p.kind == Kind::Spd && !f.auto_exposure) || (p.kind == Kind::Rcas && !f.sharpen)) {
                 continue;
             }
@@ -826,7 +880,7 @@ struct Upscaler::Impl {
             case Kind::Post: {
                 // Clears the border of a tensor: threads as the shader counts them (it stops the
                 // rest) from the tensor size and the tier's allocation.
-                const uint32_t level = p.k ? kPostLevel[p.k] : 1;
+                const uint32_t level = p.lx;
                 const uint32_t w = aw >> level, h = ah >> level;
                 const uint32_t tw = tier->max_w >> level;
                 const uint32_t th = tier->max_h >> level;
@@ -837,10 +891,10 @@ struct Upscaler::Impl {
             }
             case Kind::Model: {
                 // One thread per tensor element, tiled by the shader's workgroup: 64x1 for every
-                // pass of the generic INT8 set, 8x4 for pass11 of the Navi2 set (4.1.2).
-                const uint32_t level = kRunLevel[p.k];
-                gx = CeilDiv(aw >> level, p.refl.local_size[0]);
-                gy = CeilDiv(ah >> level, p.refl.local_size[1]);
+                // pass of the generic INT8 set, 8x4 for pass11 of the Navi2 set (4.1.2), 64x2 for
+                // Lite's pass1 (which runs full width x quarter height).
+                gx = CeilDiv(aw >> p.lx, p.refl.local_size[0]);
+                gy = CeilDiv(ah >> p.ly, p.refl.local_size[1]);
                 break;
             }
             }

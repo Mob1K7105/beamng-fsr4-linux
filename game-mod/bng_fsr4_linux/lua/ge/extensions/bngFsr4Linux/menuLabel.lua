@@ -5,17 +5,21 @@ local M = {}
 
 local customKey = 'ui.options.graphics.antialiasMode.fsrCustom'
 local fsr4Key = 'ui.options.graphics.antialiasMode.bngFsr4Linux'
+local liteKey = 'ui.options.graphics.antialiasMode.bngFsr4LinuxLite'
 local statusFile = '/temp/bng_fsr4/status.json'
 local pollInterval, staleAfter = 5, 30
 
 local active = false
+local lite = false -- the layer runs FSR 4.1.2 Lite (status variant "lite")
 local sinceCheck = pollInterval -- check on the first update
 
+-- Returns whether the layer is active, and whether it runs Lite.
 local function layerActive()
-  if not FS:fileExists(statusFile) then return false end
+  if not FS:fileExists(statusFile) then return false, false end
   local status = jsonReadFile(statusFile)
-  return type(status) == 'table' and status.ok == true and type(status.time) == 'number'
+  local ok = type(status) == 'table' and status.ok == true and type(status.time) == 'number'
     and os.time() - status.time < staleAfter
+  return ok, ok and status.variant == 'lite'
 end
 
 -- Wraps getModes once per option table; buildOptionHelpers can create a new table, so this is re-checked.
@@ -30,7 +34,7 @@ local function wrapOption()
     local modes = getModes(...)
     if active then
       for i, value in ipairs(modes.values or {}) do
-        if value == customKey then modes.values[i] = fsr4Key end
+        if value == customKey then modes.values[i] = lite and liteKey or fsr4Key end
       end
     end
     return modes
@@ -52,9 +56,9 @@ local function onUpdate(dtReal)
   if sinceCheck < pollInterval then return end
   sinceCheck = 0
   local wrapped = wrapOption()
-  local now = layerActive()
-  if now ~= active or (wrapped and now) then
-    active = now
+  local now, nowLite = layerActive()
+  if now ~= active or nowLite ~= lite or (wrapped and now) then
+    active, lite = now, nowLite
     refreshMenu()
   end
 end

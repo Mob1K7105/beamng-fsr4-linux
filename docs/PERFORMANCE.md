@@ -87,6 +87,66 @@ At 1440p that is about 0.06–0.07 ms less per frame (−2 to −3%). Most of it
 and pass11 (−0.02 ms). In a GPU-bound scene at about 90 fps, this is worth about half a frame per second. The
 in-game tables above were measured with 4.1.1.
 
+## 0.3.0: exact shader rewrites and FSR 4.1.2 Lite (2026-11-06)
+
+Offline GPU time on an RX 6700 XT (Mesa RADV), medians over 600 frames, two or three rounds that agreed within
+0.04 ms. "Exact" means the output is byte-identical to 0.2.1 and to AMD's DLL.
+
+| Render → output | 0.2.1 (Navi2) | **0.3.0 (Navi2, exact)** | **0.3.0 Lite** (`BNG_FSR4_VARIANT=lite`) |
+|---|---:|---:|---:|
+| 1280×720 → 1920×1080 | 1.472 ms | **1.359 ms** (−8%) | |
+| 1707×960 → 2560×1440 (67%) | 2.586 ms | **2.403 ms** (−7%) | **1.54 ms** (−36% against 0.3.0) |
+| 2259×1271 → 3840×2160 | 5.796 ms | **5.36 ms** (−7.5%) | |
+| 2970×835 → 5120×1440 (58%) | 5.118 ms | **4.754 ms** (−7%) | **3.18 ms** (−33% against 0.3.0) |
+
+- Nearly all of the exact gain is the postpass: `postpass_direct.py` stages one image at a time through 16 KB of
+  workgroup memory (0.2.1's rewrite used 40 KB for all three), so more waves fit on RDNA 2. The integer rounding and
+  clamping rewrites of the network passes add about 0.02 ms. The generic set gets the same rewrites.
+- Lite keeps AMD's postpass: both postpass rewrites were slower on it (3.25 and 3.47 ms at 5120×1440). Its
+  per-frame clear of 33 MB or less costs a few microseconds.
+- Not applied: the overrides project's prepass rewrite is for FSR 4.1.1's prepass (4.1.2's is a different shader),
+  its pass11 change is already in AMD's Navi2 kernels, and its shared-taps postpass variant does not match this
+  postpass. Their lossy builds (frame skipping, retrained weights) change the picture and are not used.
+
+### 0.3.0 in-game (2026-11-16)
+
+The installed 0.3.0 package (launched with only `BNG_FSR4=1`), RX 6700 XT, Mesa 26.2.6, BeamNG 0.40.4.0, 2560×1440
+output, vsync off. Frozen West Coast scene as above: 15 s per mode, 3 rounds that agreed within about 1.5 fps, medians.
+
+| Mode | FPS | GPU frame time |
+|---|---:|---:|
+| Native 100% | 75.6 | 11.8 ms |
+| FSR 3 @ 58% | 106.3 | 8.0 ms |
+| **FSR 4 @ 58%** | **95.4** | **9.1 ms** |
+| **FSR 4 Lite @ 58%** (`BNG_FSR4_VARIANT=lite`) | **103.1** | **8.3 ms** |
+| FSR 3 @ 67% | 96.7 | 9.0 ms |
+| FSR 4 @ 67% | 87.5 | 10.0 ms |
+
+Upscale step on the GPU (`FSR4STUDY_TIME_CHAIN=1`, gridmap at 58%, steady 300-frame medians): FSR 4 2.30 ms,
+the generic INT8 set 2.33 ms, Lite 1.48 ms. In the first ~1000 frames after launch some windows read about
+10 ms; they settle once the GPU is under steady load.
+
+Driving with AI traffic (7 cars, the player car on AI), FSR 4 and FSR 3 alternating in 25 s windows, BeamNG's
+per-second counters at 58%: FSR 4 93–97 fps (GPU 8.5–8.9 ms), Lite 97–104 fps (GPU 7.7–8.1 ms), FSR 3 98–103 fps
+(GPU 7.7–8.1 ms). No sample went over 16.7 ms of GPU time, so with vsync at 60 Hz all three hold 60 fps on
+this GPU in these scenes.
+
+## High output resolutions (5120×1440 and up)
+
+FSR 4's cost follows the **output** size. 5120×1440 has twice the pixels of 2560×1440, so FSR 4 costs about
+twice as much. Offline on the RX 6700 XT, 3328×936 → 5120×1440 (65%): 4.78 ms (Navi2), 4.90 ms (generic),
+3.25 ms (Lite). At that output size FSR 4 can use up most of what the lower render scale saves. One user report
+(RX 9060 XT, generic set, 5120×1440 at 65%) measured 16.3 ms GPU time with FSR 4 against 9.4 ms with SMAA at the
+same scale.
+
+What helps:
+- Try Lite (`BNG_FSR4_VARIANT=lite BNG_FSR4=1 %command%`): about a third cheaper.
+- Compare against FSR 3 (custom) at the same scale, not against SMAA/FXAA, which cost almost nothing.
+- BeamNG's "Off" anti-aliasing mode ignores the Resolution Scaling slider and renders at full resolution.
+
+RDNA 4 has FP8 hardware that AMD's own FSR 4 uses on Windows. This layer only has the INT8 kernels, so RDNA 3 and
+RDNA 4 run the generic INT8 set.
+
 ## Why FSR 4 costs more on RDNA 2
 
 FSR 4.1.1 is a neural network. RDNA 2 has no WMMA or FP8 hardware, so the INT8 model runs on packed dot
